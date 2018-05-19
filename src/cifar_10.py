@@ -1,9 +1,11 @@
 import resnet
+import resnet_model
 import tensorflow as tf
 
 _WIDTH = 32
 _HEIGHT = 32
 _CHANNELS = 3
+_NUM_CLASSES = 10
 
 _NUM_IMAGES = {
     'train': 50000,
@@ -12,7 +14,7 @@ _NUM_IMAGES = {
 
 class Cifar10Model(resnet.Model):
 
-    def __init__(self, resnet_size, num_classes, data_format='channel_last'):
+    def __init__(self, resnet_size, num_classes=_NUM_CLASSES, data_format='channels_last'):
 
         num_blocks = (resnet_size - 2) // 6
 
@@ -33,6 +35,7 @@ class Cifar10Model(resnet.Model):
             data_format=data_format
         )
 
+
 def cifar_model_fn(features, labels, mode, params):
     features = tf.reshape(features, [-1, _WIDTH, _HEIGHT, _CHANNELS])
 
@@ -43,7 +46,7 @@ def cifar_model_fn(features, labels, mode, params):
         decay_rates=[1, 0.1, 0.01, 0.001]
     )
     weight_decay = 2e-4
-    return resnet.resnet_model_fn(features, labels, mode, Cifar10Model, params['resnet_size'], weight_decay,
+    return resnet_model.resnet_model_fn(features, labels, mode, Cifar10Model, params['resnet_size'], weight_decay,
                                   learning_rate_fn, 0.9, params['data_format'])
 
 

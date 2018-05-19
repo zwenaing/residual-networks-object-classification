@@ -43,8 +43,7 @@ def get_input_data(batch_size, shuffle_buffer, is_training, parse_record_fn, num
 
 
 def parse_record_fn(x, y, is_training):
-    one_hot_label = tf.one_hot(y, _NUM_CLASSES)
-
+    one_hot_label = tf.reshape(tf.one_hot(y, _NUM_CLASSES), [-1])
     x = tf.reshape(x, [_IMAGE_CHANNEL, _IMAGE_WIDTH, _IMAGE_HEIGHT])
     x = tf.transpose(x, [1, 2, 0])
 

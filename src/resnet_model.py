@@ -3,7 +3,7 @@ import tensorflow as tf
 
 def resnet_model_fn(features, labels, mode, model_class, resnet_size, weight_decay, learning_rate_fn, momentum, data_format):
 
-    model = model_class(resnet_size, data_format)
+    model = model_class(resnet_size)
     logits = model(features, mode == tf.estimator.ModeKeys.TRAIN)
 
     predictions = {
@@ -11,7 +11,7 @@ def resnet_model_fn(features, labels, mode, model_class, resnet_size, weight_dec
         'probabilities': tf.nn.softmax(logits, axis=1)
     }
 
-    if (mode == tf.estimator.ModeKeys.PREDICT):
+    if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode, predictions)
 
     cross_entropy = tf.losses.softmax_cross_entropy(labels, logits)

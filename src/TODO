@@ -1,0 +1,7 @@
+#TODO:
+1. Per-pixel mean subtraction
+2. Data augmentation - 4 pixels padding, 32 x 32 random crop, horizontal flip
+3. weight decay - 0.00001
+4. momentum - 0.9
+5. learning weight decay - 0.1 at 32k , 48k, 64k iterations, start with 0.1
+6. 45k / 5k train/val split

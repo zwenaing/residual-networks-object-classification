@@ -1,6 +1,8 @@
 import tensorflow as tf
 import input_data
 
+import argparse
+
 _BATCH_NORM_MOMENTUM = 0.997
 _BATCH_NORM_EPSILON = 1e-5
 
@@ -127,6 +129,19 @@ def learning_rate_with_decay(num_images, batch_size, boundary_epochs, decay_rate
     return learning_rate_fn
 
 
+def validate_batch_size_multi_gpu(batch_size):
+    from tensorflow.python.client import device_lib
+    local_devices = device_lib.list_local_devices()
+    num_gpus = sum([1 for d in local_devices if d.device_type == 'GPU'])
+
+    if not num_gpus:
+        raise ValueError("Multi_gpus is specified, but no gpus are found")
+
+    remainder = batch_size % num_gpus
+    if remainder:
+        raise ValueError("The batch size must be divisible by the number of GPUs available")
+
+
 class Model:
 
     def __init__(self, resnet_size, n_classes, filters, kernel_size, conv_stride, first_pool_size, first_pool_stride,
@@ -171,29 +186,56 @@ class Model:
         return inputs
 
 
-def resnet_main(model_function):
+def resnet_main(flags, model_function):
+
+    if flags.multi_gpu:
+        validate_batch_size_multi_gpu(flags.batch_size)
+        model_function = tf.contrib.estimator.replicate_model_fn(
+            model_function,
+            loss_reduction = tf.losses.Reduction.MEAN
+        )
 
     classifier = tf.estimator.Estimator(
         model_fn=model_function,
         params={
-            'resnet_size': 20,
-            'data_format': "channels_last"
+            'resnet_size': flags.resnet_size,
+            'data_format': "channels_last",
+            'multi_gpu': flags.multi_gpu
         }
     )
 
     print("Starting a training cycle")
 
     classifier.train(
-        input_fn=lambda : input_data.get_input_data(128, 100, True, input_data.parse_record_fn, 200)
+        input_fn=lambda : input_data.get_input_data(flags.batch_size, flags.shuffle_buffer, True, input_data.parse_record_fn, flags.train_epochs)
     )
 
     print("Starting evaluation")
 
     eval_results = classifier.evaluate(
-        input_fn=lambda : input_data.get_input_data(128, 100, False, input_data.parse_record_fn, 1)
+        input_fn=lambda : input_data.get_input_data(flags.batch_size, flags.shuffle_buffer, False, input_data.parse_record_fn, flags.epochs_per_eval)
     )
 
     print(eval_results)
+
+
+class ResnetArgParser(argparse.ArgumentParser):
+
+    def __init__(self):
+        super().__init__()
+        self.add_argument("--data_dir", type=str, default="tmp/resnet_data", help="The directory of input data")
+        self.add_argument("--model_dir", type=str, default="log/resnet_model", help="The directory where model data is stored")
+        self.add_argument("--resnet_size", type=int, default=50, help="The size of resnet model")
+        self.add_argument("--train_epochs", type=int, default=100, help="Number of epochs to train")
+        self.add_argument("--batch_size", type=int, default=32, help="The batch size to use during training")
+        self.add_argument("--data_format", type=str, default=None, choices=["channels_first", "channels_last"],
+                          help="A flag to override which data format to use in the model")
+        self.add_argument("--epochs_per_eval", type=int, default=1, help="The number of training epochs to run in each evaluation")
+        self.add_argument("--shuffle_buffer", type=int, default=100, help="The size of the buffer for shuffling input data")
+        self.add_argument("--multi_gpu", action='store_true', help="Run across multpile gpus")
+
+
+
 
 
 

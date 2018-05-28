@@ -47,10 +47,20 @@ def cifar_model_fn(features, labels, mode, params):
     )
     weight_decay = 2e-4
     return resnet_model.resnet_model_fn(features, labels, mode, Cifar10Model, params['resnet_size'], weight_decay,
-                                  learning_rate_fn, 0.9, params['data_format'])
+                                  learning_rate_fn, 0.9, params['data_format'], params['multi_gpu'])
 
 
 if __name__ == '__main__':
-    resnet.resnet_main(cifar_model_fn)
+    argparser = resnet.ResnetArgParser()
+    argparser.set_defaults(
+        data_dir='/tmp/cifar10_data',
+        model_dir='/tmp/cifar10_model',
+        resnet_size=32,
+        train_epochs=250,
+        epochs_per_eval=10,
+        batch_size=128
+    )
+    FLAGS, unparse = argparser.parse_known_args()
+    resnet.resnet_main(FLAGS, cifar_model_fn)
     tf.logging.set_verbosity(tf.logging.INFO)
     tf.app.run()

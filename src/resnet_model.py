@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def resnet_model_fn(features, labels, mode, model_class, resnet_size, weight_decay, learning_rate_fn, momentum, data_format):
+def resnet_model_fn(features, labels, mode, model_class, resnet_size, weight_decay, learning_rate_fn, momentum, data_format, multi_gpu=False):
 
     model = model_class(resnet_size)
     logits = model(features, mode == tf.estimator.ModeKeys.TRAIN)
@@ -23,6 +23,10 @@ def resnet_model_fn(features, labels, mode, model_class, resnet_size, weight_dec
         global_step = tf.train.get_or_create_global_step()
         learning_rate = learning_rate_fn(global_step)
         optimizer = tf.train.MomentumOptimizer(learning_rate, momentum)
+
+        if multi_gpu:
+            optimizer = tf.contrib.estimator.TowerOptimizer(optimizer)
+
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         train_ops = tf.group(optimizer.minimize(loss, global_step), update_ops)
     else:
